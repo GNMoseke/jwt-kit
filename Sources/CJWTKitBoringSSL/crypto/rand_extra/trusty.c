@@ -12,20 +12,27 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
 
-#include "internal.h"
+#include <CJWTKitBoringSSL_rand.h>
 
-#if defined(OPENSSL_ARM) && defined(OPENSSL_OPENBSD) && \
-    !defined(OPENSSL_STATIC_ARMCAP)
+#include "../fipsmodule/rand/internal.h"
 
-#include <CJWTKitBoringSSL_arm_arch.h>
+#if defined(OPENSSL_RAND_TRUSTY)
+#include <stdint.h>
+#include <stdlib.h>
 
-extern uint32_t OPENSSL_armcap_P;
+#include <sys/types.h>
+#include <uapi/err.h>
 
-void OPENSSL_cpuid_setup(void) {
-  // OpenBSD does not support arm32 machines without NEON
-  OPENSSL_armcap_P |= ARMV7_NEON;
+#include <lib/rng/trusty_rng.h>
 
-  // OpenBSD does not support v8 features on non aarch64
+void CRYPTO_sysrand(uint8_t *out, size_t requested) {
+  if (trusty_rng_hw_rand(out, requested) != NO_ERROR) {
+    abort();
+  }
 }
 
-#endif  // OPENSSL_ARM && OPENSSL_OPENBSD && !OPENSSL_STATIC_ARMCAP
+void CRYPTO_sysrand_for_seed(uint8_t *out, size_t requested) {
+  CRYPTO_sysrand(out, requested);
+}
+
+#endif  // OPENSSL_RAND_TRUSTY
